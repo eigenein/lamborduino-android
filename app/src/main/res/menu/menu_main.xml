@@ -5,8 +5,13 @@
     tools:context=".MainActivity">
 
     <item
+        android:id="@+id/menu_item_update_vcc"
+        android:icon="@drawable/ic_battery_unknown_white_24dp"
+        android:title="@string/menu_item_update_vcc"
+        app:showAsAction="ifRoom|withText"/>
+    <item
         android:id="@+id/menu_item_connect"
         android:icon="@drawable/ic_bluetooth_white_24dp"
-        android:title="Connect"
-        app:showAsAction="always"/>
+        android:title="@string/menu_item_connect"
+        app:showAsAction="ifRoom"/>
 </menu>

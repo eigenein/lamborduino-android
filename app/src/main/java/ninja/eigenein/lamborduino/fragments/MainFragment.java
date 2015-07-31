@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -17,29 +18,25 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-import ninja.eigenein.lamborduino.Commands;
 import ninja.eigenein.lamborduino.R;
+import ninja.eigenein.lamborduino.core.CarConnection;
+import ninja.eigenein.lamborduino.core.Telemetry;
 
 public class MainFragment extends Fragment {
 
     private static final UUID SERIAL_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-    private static final int MAGIC = 0x55;
 
-    private TextView connectionTextView;
-    private TextView vccTextView;
+    private MenuItem connectMenuItem;
+    private MenuItem updateVccMenuItem;
 
-    private BluetoothSocket socket;
-    private double vcc;
+    private CarConnection carConnection = new CarConnection();
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
@@ -51,35 +48,61 @@ public class MainFragment extends Fragment {
 
     @Override
     public View onCreateView(
-            final LayoutInflater inflater,
+            final @NonNull LayoutInflater inflater,
             final ViewGroup container,
             final Bundle savedInstanceState
     ) {
-        final View view = inflater.inflate(R.layout.fragment_main, container, false);
-        connectionTextView = (TextView)view.findViewById(R.id.text_view_connection);
-        vccTextView = (TextView)view.findViewById(R.id.text_view_vcc);
-        vccTextView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(final View view) {
-                if (socket != null) {
-                    updateTelemetry();
-                }
-            }
-        });
-        return view;
+        return inflater.inflate(R.layout.fragment_main, container, false);
     }
 
     @Override
     public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
         inflater.inflate(R.menu.menu_main, menu);
+        connectMenuItem = menu.findItem(R.id.menu_item_connect);
+        updateVccMenuItem = menu.findItem(R.id.menu_item_update_vcc);
+        updateView();
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+
+        carConnection.setListener(new CarConnection.SocketChangedListener() {
+            @Override
+            public void onSocketChanged(final CarConnection connection) {
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateView();
+                    }
+                });
+            }
+        });
+    }
+
+    @Override
+    public void onStop() {
+        carConnection.setListener(null);
+        super.onStop();
     }
 
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
+
             case R.id.menu_item_connect:
                 connect();
                 return true;
+
+            case R.id.menu_item_update_vcc:
+                final Telemetry telemetry = carConnection.noop();
+                if (telemetry != null) {
+                    getActivity().setTitle(getString(R.string.title_vcc, telemetry.vcc));
+                } else {
+                    Toast.makeText(getActivity(), R.string.toast_not_connected, Toast.LENGTH_SHORT).show();
+                }
+                return true;
+
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -94,7 +117,7 @@ public class MainFragment extends Fragment {
 
         final List<BluetoothDevice> devices = new ArrayList<>(adapter.getBondedDevices());
         if (devices.size() == 0) {
-            Toast.makeText(getActivity(), "No paired devices.", Toast.LENGTH_LONG).show();
+            Toast.makeText(getActivity(), R.string.toast_no_paired_devices, Toast.LENGTH_LONG).show();
             return;
         }
 
@@ -107,77 +130,29 @@ public class MainFragment extends Fragment {
                 .setCancelable(true)
                 .setAdapter(dialogAdapter, new DialogInterface.OnClickListener() {
                     @Override
-                    public void onClick(final DialogInterface dialog, final int which) {
+                    public void onClick(final @NonNull DialogInterface dialog, final int which) {
                         new ConnectAsyncTask().execute(devices.get(which));
                     }
                 })
                 .show();
     }
 
-    private synchronized void onConnected(final BluetoothSocket socket) {
-        if (this.socket != null) {
-            try {
-                this.socket.close();
-            } catch (IOException e) {
-                // Do nothing.
-            }
+    private void updateView() {
+        if (carConnection.isConnected()) {
+            connectMenuItem.setIcon(R.drawable.ic_bluetooth_connected_white_24dp);
+            updateVccMenuItem.setIcon(R.drawable.ic_battery_std_white_24dp);
+            getActivity().setTitle(getString(R.string.title_vcc, carConnection.noop().vcc));
+        } else {
+            connectMenuItem.setIcon(R.drawable.ic_bluetooth_white_24dp);
+            updateVccMenuItem.setIcon(R.drawable.ic_battery_unknown_white_24dp);
+            getActivity().setTitle(R.string.app_name);
         }
-
-        this.socket = socket;
-        connectionTextView.setText(socket.getRemoteDevice().getName());
-        connectionTextView.setBackgroundResource(R.color.light_green_50);
-        updateTelemetry();
     }
 
-    private synchronized void onDisconnected(final Exception exception) {
-        socket = null;
-        connectionTextView.setText("Offline");
-        connectionTextView.setBackgroundResource(R.color.red_50);
-        Toast.makeText(getActivity(), exception.getMessage(), Toast.LENGTH_LONG).show();
-    }
-
-    private synchronized void updateTelemetry() {
-        try {
-            sendNoop();
-            readTelemetry();
-        } catch (final IOException e) {
-            onDisconnected(e);
-            return;
-        }
-        vccTextView.setText(Double.toString(vcc) + "V");
-    }
-
-    /**
-     * Sends no operation.
-     */
-    private synchronized void sendNoop() throws IOException {
-        socket.getOutputStream().write(Commands.NOOP);
-    }
-
-    /**
-     * Reads telemetry from the connected device.
-     */
-    private synchronized void readTelemetry() throws IOException {
-        if (socket == null) {
-            throw new IOException("no socket");
-        }
-        if (socket.getInputStream().read() != MAGIC) {
-            throw new IOException("invalid magic");
-        }
-
-        final byte[] vcc = new byte[4];
-        if (socket.getInputStream().read(vcc) != vcc.length) {
-            throw new IOException("failed to read VCC");
-        }
-        final ByteBuffer buffer = ByteBuffer.wrap(vcc);
-        buffer.order(ByteOrder.LITTLE_ENDIAN);
-        this.vcc = buffer.getInt() / 1000.0;
-    }
-
-    private class ConnectAsyncTask extends AsyncTask<BluetoothDevice, String, BluetoothSocket> {
+    private class ConnectAsyncTask extends AsyncTask<BluetoothDevice, String, Void> {
 
         private ProgressDialog progressDialog;
-        private Exception exception;
+        private Exception exception = null;
 
         @Override
         protected void onPreExecute() {
@@ -190,32 +165,32 @@ public class MainFragment extends Fragment {
         }
 
         @Override
-        protected synchronized BluetoothSocket doInBackground(final BluetoothDevice... devices) {
+        protected synchronized Void doInBackground(final @NonNull BluetoothDevice... devices) {
             publishProgress(devices[0].getName());
             try {
                 final BluetoothSocket socket = devices[0].createRfcommSocketToServiceRecord(SERIAL_UUID);
                 socket.connect();
-                return socket;
+                carConnection.setSocket(socket);
             } catch (final IOException e) {
                 exception = e;
-                return null;
             }
+            return null;
         }
 
         @Override
         protected void onProgressUpdate(final String... values) {
-            progressDialog.setMessage(values[0]);
+            progressDialog.setMessage(getString(R.string.dialog_connecting, values[0]));
         }
 
         @Override
-        protected void onPostExecute(final BluetoothSocket socket) {
+        protected void onPostExecute(final @NonNull Void result) {
             progressDialog.hide();
             progressDialog = null;
 
-            if (socket != null) {
-                onConnected(socket);
+            if (exception == null) {
+                Toast.makeText(getActivity(), R.string.toast_connected, Toast.LENGTH_SHORT).show();
             } else {
-                onDisconnected(exception);
+                Toast.makeText(getActivity(), exception.getMessage(), Toast.LENGTH_LONG).show();
             }
         }
     }

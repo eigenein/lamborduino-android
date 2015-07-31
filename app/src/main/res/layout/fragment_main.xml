@@ -3,21 +3,4 @@
               android:orientation="vertical"
               android:layout_width="match_parent"
               android:layout_height="match_parent">
-    <TextView
-        android:id="@+id/text_view_connection"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/red_50"
-        android:text="Not connected"
-        android:gravity="center"
-        android:padding="8dp"/>
-    <TextView
-        android:id="@+id/text_view_vcc"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/yellow_100"
-        android:text="Battery level is unknown"
-        android:gravity="center"
-        android:padding="8dp"
-        android:textAppearance="?android:attr/textAppearanceLarge"/>
 </LinearLayout>
