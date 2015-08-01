@@ -27,14 +27,10 @@ import java.util.UUID;
 
 import ninja.eigenein.lamborduino.R;
 import ninja.eigenein.lamborduino.core.CarConnection;
-import ninja.eigenein.lamborduino.core.Telemetry;
 
 public class MainFragment extends Fragment {
 
     private static final UUID SERIAL_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
-
-    private MenuItem connectMenuItem;
-    private MenuItem updateVccMenuItem;
 
     private CarConnection carConnection = new CarConnection();
 
@@ -52,15 +48,19 @@ public class MainFragment extends Fragment {
             final ViewGroup container,
             final Bundle savedInstanceState
     ) {
-        return inflater.inflate(R.layout.fragment_main, container, false);
+        final View view = inflater.inflate(R.layout.fragment_main, container, false);
+        view.findViewById(R.id.fab_connect).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(final View view) {
+                connect();
+            }
+        });
+        return view;
     }
 
     @Override
     public void onCreateOptionsMenu(final Menu menu, final MenuInflater inflater) {
         inflater.inflate(R.menu.menu_main, menu);
-        connectMenuItem = menu.findItem(R.id.menu_item_connect);
-        updateVccMenuItem = menu.findItem(R.id.menu_item_update_vcc);
-        updateView();
     }
 
     @Override
@@ -78,6 +78,8 @@ public class MainFragment extends Fragment {
                 });
             }
         });
+
+        updateView();
     }
 
     @Override
@@ -89,20 +91,6 @@ public class MainFragment extends Fragment {
     @Override
     public boolean onOptionsItemSelected(final MenuItem item) {
         switch (item.getItemId()) {
-
-            case R.id.menu_item_connect:
-                connect();
-                return true;
-
-            case R.id.menu_item_update_vcc:
-                final Telemetry telemetry = carConnection.noop();
-                if (telemetry != null) {
-                    getActivity().setTitle(getString(R.string.title_vcc, telemetry.vcc));
-                } else {
-                    Toast.makeText(getActivity(), R.string.toast_not_connected, Toast.LENGTH_SHORT).show();
-                }
-                return true;
-
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -138,15 +126,13 @@ public class MainFragment extends Fragment {
     }
 
     private void updateView() {
+        /* TODO: subheader.
         if (carConnection.isConnected()) {
-            connectMenuItem.setIcon(R.drawable.ic_bluetooth_connected_white_24dp);
-            updateVccMenuItem.setIcon(R.drawable.ic_battery_std_white_24dp);
             getActivity().setTitle(getString(R.string.title_vcc, carConnection.noop().vcc));
         } else {
-            connectMenuItem.setIcon(R.drawable.ic_bluetooth_white_24dp);
-            updateVccMenuItem.setIcon(R.drawable.ic_battery_unknown_white_24dp);
             getActivity().setTitle(R.string.app_name);
         }
+        */
     }
 
     private class ConnectAsyncTask extends AsyncTask<BluetoothDevice, String, Void> {
