@@ -114,7 +114,7 @@ public class MainFragment extends Fragment {
             dialogAdapter.add(device.getName());
         }
         new AlertDialog.Builder(getActivity())
-                .setTitle("Choose paired device")
+                .setTitle(R.string.title_choose_vehicle)
                 .setCancelable(true)
                 .setAdapter(dialogAdapter, new DialogInterface.OnClickListener() {
                     @Override
