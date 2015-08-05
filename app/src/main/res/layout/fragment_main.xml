@@ -5,6 +5,16 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <ninja.eigenein.joypad.JoypadView
+        android:layout_width="200dp"
+        android:layout_height="200dp"
+        android:layout_marginLeft="@dimen/activity_horizontal_margin"
+        android:layout_marginStart="@dimen/activity_horizontal_margin"
+        android:layout_marginBottom="@dimen/activity_vertical_margin"
+        android:layout_gravity="start|bottom"
+        app:outer_color="@color/white_12p"
+        app:inner_color="@color/white_30p"
+        app:moveable_color="@color/white_70p"/>
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -15,22 +25,24 @@
             android:id="@+id/fab_front_light"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:src="@drawable/ic_wb_sunny_grey600_24dp"
             app:borderWidth="0dp"
             app:backgroundTint="@android:color/white"
-            style="@style/FloatingActionButton"/>
+            style="@style/AppTheme.Fab"/>
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/fab_back_light"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:src="@drawable/ic_wb_sunny_white_24dp"
             app:borderWidth="0dp"
             app:backgroundTint="@color/red_500"
-            style="@style/FloatingActionButton"/>
+            style="@style/AppTheme.Fab"/>
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/fab_connect"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/ic_bluetooth_white_24dp"
             app:borderWidth="0dp"
-            style="@style/FloatingActionButton"/>
+            style="@style/AppTheme.Fab"/>
     </LinearLayout>
 </FrameLayout>

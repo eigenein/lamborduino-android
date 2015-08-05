@@ -4,4 +4,10 @@
     <color name="blue_900">#0D47A1</color>
     <color name="blue_a200">#448AFF</color>
     <color name="red_500">#F44336</color>
+    <color name="grey_50">#FAFAFA</color>
+    <color name="grey_100">#F5F5F5</color>
+    <color name="grey_200">#EEEEEE</color>
+    <color name="white_12p">#1FFFFFFF</color>
+    <color name="white_30p">#4DFFFFFF</color>
+    <color name="white_70p">#B3FFFFFF</color>
 </resources>
