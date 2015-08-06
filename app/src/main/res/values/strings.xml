@@ -3,6 +3,9 @@
     <string name="toast_connected">Connected.</string>
     <string name="dialog_connecting">Connecting to %s.</string>
     <string name="toast_no_paired_devices">No paired devices.</string>
-    <string name="text_view_not_available">N/A</string>
+    <string name="telemetry_not_available">not available</string>
+    <string name="telemetry_device">%1$s [%2$s]</string>
+    <string name="telemetry_voltage">%1$.2f V</string>
+    <string name="telemetry_ping">%1$d ms</string>
     <string name="title_choose_vehicle">Choose vehicle</string>
 </resources>

@@ -4,15 +4,19 @@ import android.bluetooth.BluetoothSocket;
 import android.util.Log;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class CarConnection {
+public class VehicleConnection {
 
-    private static final String LOG_TAG = CarConnection.class.getSimpleName();
+    private static final String LOG_TAG = VehicleConnection.class.getSimpleName();
 
     private static final int[] BYTE_ORDER_MARK = {0xFF, 0xFE};
+
     private static final byte[] COMMAND_NOOP = {0x01};
+    private static final byte[] COMMAND_STOP = {0x02};
+    private static final byte[] COMMAND_MOVE = {0x03};
 
     private SocketChangedListener listener;
     private BluetoothSocket socket;
@@ -21,8 +25,8 @@ public class CarConnection {
         this.listener = listener;
     }
 
-    public boolean isConnected() {
-        return socket != null;
+    public BluetoothSocket getSocket() {
+        return socket;
     }
 
     public synchronized void setSocket(final BluetoothSocket socket) {
@@ -44,19 +48,26 @@ public class CarConnection {
         }
     }
 
+    /**
+     * Sends empty command.
+     */
     public synchronized Telemetry noop() {
         return sendCommand(COMMAND_NOOP);
     }
 
+    /**
+     * Sends the command and receives telemetry in response.
+     */
     private synchronized Telemetry sendCommand(final byte[]... buffers) {
         if (socket == null) {
             return null;
         }
+        final long startTimeMillis = System.currentTimeMillis();
         try {
             for (final byte[] buffer : buffers) {
                 socket.getOutputStream().write(buffer);
             }
-            return receiveTelemetry();
+            return receiveTelemetry(startTimeMillis);
         } catch (final IOException e) {
             Log.e(LOG_TAG, "Failed to send command.", e);
             setSocket(null);
@@ -64,12 +75,18 @@ public class CarConnection {
         }
     }
 
-    private synchronized Telemetry receiveTelemetry() throws IOException {
+    /**
+     * Receives telemetry from the connected device.
+     */
+    private synchronized Telemetry receiveTelemetry(final long startTimeMillis) throws IOException {
         final ByteOrder byteOrder = receiveByteOrderMark();
         final double vcc = receiveInt(byteOrder) / 1000.0;
-        return new Telemetry(vcc);
+        return new Telemetry(System.currentTimeMillis() - startTimeMillis, vcc);
     }
 
+    /**
+     * Receives byte order mark and gets {@see ByteOrder}.
+     */
     private synchronized ByteOrder receiveByteOrderMark() throws IOException {
         final int byte1 = socket.getInputStream().read();
         final int byte2 = socket.getInputStream().read();
@@ -82,16 +99,29 @@ public class CarConnection {
         throw new IOException(String.format("invalid byte order mark: %02x %02x", byte1, byte2));
     }
 
+    /**
+     * Receives {@see int} that is Arduino's long.
+     */
     private synchronized int receiveInt(final ByteOrder byteOrder) throws IOException {
-        final byte[] buffer = new byte[4];
-        if (socket.getInputStream().read(buffer) != buffer.length) {
-            throw new IOException("failed to read integer");
-        }
+        final byte[] buffer = new byte[Integer.SIZE / 8];
+        receiveBytes(buffer);
         return ByteBuffer.wrap(buffer).order(byteOrder).getInt();
+    }
+
+    /**
+     * Performs blocking read.
+     */
+    private synchronized void receiveBytes(final byte[] buffer) throws IOException {
+        final InputStream inputStream = socket.getInputStream();
+        for (int offset = 0; offset < buffer.length; offset += 1) {
+            if (inputStream.read(buffer, offset, 1) == 0) {
+                throw new IOException("failed to read byte #" + offset);
+            }
+        }
     }
 
     public interface SocketChangedListener {
 
-        void onSocketChanged(final CarConnection connection);
+        void onSocketChanged(final VehicleConnection connection);
     }
 }

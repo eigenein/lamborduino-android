@@ -5,37 +5,95 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Telemetry. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:padding="8dp"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:background="@color/white_12p">
 
-        <ImageView
+        <LinearLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:scaleType="center"
-            android:src="@drawable/ic_battery_std_white_48dp"/>
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginLeft="8dp"
-            android:layout_marginStart="8dp"
-            android:textSize="48sp"
-            android:text="@string/text_view_not_available"/>
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:scaleType="center"
+                android:src="@drawable/ic_bluetooth_white_24dp"/>
+            <TextView
+                android:id="@+id/text_view_device"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:textSize="24sp"
+                android:text="@string/telemetry_not_available"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:scaleType="center"
+                android:src="@drawable/ic_battery_std_white_24dp"/>
+            <TextView
+                android:id="@+id/text_view_battery"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:textSize="24sp"
+                android:text="@string/telemetry_not_available"/>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="48dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:scaleType="center"
+                android:src="@drawable/ic_import_export_white_24dp"/>
+            <TextView
+                android:id="@+id/text_view_ping"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:textSize="24sp"
+                android:text="@string/telemetry_not_available"/>
+        </LinearLayout>
     </LinearLayout>
+
+    <!-- Joypad. -->
     <ninja.eigenein.joypad.JoypadView
-        android:layout_width="200dp"
-        android:layout_height="200dp"
+        android:id="@+id/joypad"
+        android:layout_width="240dp"
+        android:layout_height="240dp"
         android:layout_marginLeft="@dimen/activity_horizontal_margin"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginBottom="@dimen/activity_vertical_margin"
         android:layout_gravity="start|bottom"
         app:outer_color="@color/white_12p"
         app:inner_color="@color/white_30p"
-        app:moveable_color="@color/white_70p"/>
+        app:moveable_color="@color/white_70p"
+        app:inner_radius="72dp"
+        app:moveable_radius="48dp"/>
+
+    <!-- Floating action buttons. -->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

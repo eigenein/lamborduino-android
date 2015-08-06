@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AlertDialog;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -18,21 +19,31 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
+import ninja.eigenein.joypad.JoypadView;
 import ninja.eigenein.lamborduino.R;
-import ninja.eigenein.lamborduino.core.CarConnection;
+import ninja.eigenein.lamborduino.core.VehicleConnection;
+import ninja.eigenein.lamborduino.core.Telemetry;
 
-public class MainFragment extends Fragment {
+public class MainFragment extends Fragment implements JoypadView.Listener {
 
     private static final UUID SERIAL_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
-    private CarConnection carConnection = new CarConnection();
+    private final ThreadPoolExecutor moveExecutor = (ThreadPoolExecutor)Executors.newFixedThreadPool(1);
+    private final VehicleConnection vehicleConnection = new VehicleConnection();
+
+    private TextView textViewDevice;
+    private TextView textViewBattery;
+    private TextView textViewPing;
 
     @Override
     public void onCreate(final Bundle savedInstanceState) {
@@ -49,12 +60,19 @@ public class MainFragment extends Fragment {
             final Bundle savedInstanceState
     ) {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
+
+        textViewDevice = (TextView)view.findViewById(R.id.text_view_device);
+        textViewBattery = (TextView)view.findViewById(R.id.text_view_battery);
+        textViewPing = (TextView)view.findViewById(R.id.text_view_ping);
+
+        ((JoypadView)view.findViewById(R.id.joypad)).setListener(this);
         view.findViewById(R.id.fab_connect).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(final View view) {
-                connect();
+                startConnecting();
             }
         });
+
         return view;
     }
 
@@ -67,24 +85,23 @@ public class MainFragment extends Fragment {
     public void onStart() {
         super.onStart();
 
-        carConnection.setListener(new CarConnection.SocketChangedListener() {
+        vehicleConnection.setListener(new VehicleConnection.SocketChangedListener() {
             @Override
-            public void onSocketChanged(final CarConnection connection) {
+            public void onSocketChanged(final VehicleConnection connection) {
+                final Telemetry telemetry = vehicleConnection.noop();
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        updateView();
+                        updateTelemetryView(telemetry);
                     }
                 });
             }
         });
-
-        updateView();
     }
 
     @Override
     public void onStop() {
-        carConnection.setListener(null);
+        vehicleConnection.setListener(null);
         super.onStop();
     }
 
@@ -96,7 +113,33 @@ public class MainFragment extends Fragment {
         }
     }
 
-    private synchronized void connect() {
+    @Override
+    public void onUp() {
+        // TODO: stop vehicle. Empty move executor.
+    }
+
+    @Override
+    public void onMove(final float distance, final float dx, final float dy) {
+        if (moveExecutor.getActiveCount() != 0) {
+            // Other command is already being executed.
+            return;
+        }
+        moveExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                // TODO: move vehicle instead of doing nothing.
+                final Telemetry telemetry = vehicleConnection.noop();
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateTelemetryView(telemetry);
+                    }
+                });
+            }
+        });
+    }
+
+    private synchronized void startConnecting() {
         final BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
         if (!adapter.isEnabled()) {
             startActivityForResult(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE), 1);
@@ -125,17 +168,26 @@ public class MainFragment extends Fragment {
                 .show();
     }
 
-    private void updateView() {
-        /* TODO: subheader.
-        if (carConnection.isConnected()) {
-            getActivity().setTitle(getString(R.string.title_vcc, carConnection.noop().vcc));
+    private void updateTelemetryView(final Telemetry telemetry) {
+        if (telemetry != null) {
+            final BluetoothDevice device = vehicleConnection.getSocket().getRemoteDevice();
+            textViewDevice.setText(getString(R.string.telemetry_device, device.getName(), device.getAddress()));
+            textViewBattery.setText(getString(R.string.telemetry_voltage, telemetry.vcc));
+            textViewPing.setText(getString(R.string.telemetry_ping, telemetry.ping));
         } else {
-            getActivity().setTitle(R.string.app_name);
+            textViewDevice.setText(R.string.telemetry_not_available);
+            textViewBattery.setText(R.string.telemetry_not_available);
+            textViewPing.setText(R.string.telemetry_not_available);
         }
-        */
     }
 
+    /**
+     * Connects to the specified {@see BluetoothDevice}.
+     */
     private class ConnectAsyncTask extends AsyncTask<BluetoothDevice, String, Void> {
+
+        private final static int ATTEMPT_COUNT = 3;
+        private final String LOG_TAG = ConnectAsyncTask.class.getSimpleName();
 
         private ProgressDialog progressDialog;
         private Exception exception = null;
@@ -152,13 +204,20 @@ public class MainFragment extends Fragment {
 
         @Override
         protected synchronized Void doInBackground(final @NonNull BluetoothDevice... devices) {
+            vehicleConnection.setSocket(null);
             publishProgress(devices[0].getName());
-            try {
-                final BluetoothSocket socket = devices[0].createRfcommSocketToServiceRecord(SERIAL_UUID);
-                socket.connect();
-                carConnection.setSocket(socket);
-            } catch (final IOException e) {
-                exception = e;
+            for (int i = 0; i < ATTEMPT_COUNT; i += 1) {
+                Log.i(LOG_TAG, "attempt #" + i);
+                try {
+                    final BluetoothSocket socket = devices[0].createRfcommSocketToServiceRecord(SERIAL_UUID);
+                    socket.connect();
+                    vehicleConnection.setSocket(socket);
+                } catch (final IOException e) {
+                    exception = e;
+                    continue;
+                }
+                exception = null;
+                break;
             }
             return null;
         }
@@ -170,7 +229,7 @@ public class MainFragment extends Fragment {
 
         @Override
         protected void onPostExecute(final @NonNull Void result) {
-            progressDialog.hide();
+            progressDialog.dismiss();
             progressDialog = null;
 
             if (exception == null) {
