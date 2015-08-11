@@ -56,12 +56,39 @@ public class VehicleConnection {
     }
 
     /**
+     * Sends full stop.
+     */
+    public synchronized Telemetry stop() {
+        return sendCommand(COMMAND_STOP);
+    }
+
+    /**
+     * Sends move command.
+     */
+    public synchronized Telemetry move(final float speed, final boolean inverse) {
+        final float normalizedSpeed;
+        if (speed < 0f) {
+            normalizedSpeed = 0f;
+        } else if (speed > 1f) {
+            normalizedSpeed = 1f;
+        } else {
+            normalizedSpeed = speed;
+        }
+
+        return sendCommand(COMMAND_MOVE, new byte[] {
+                (byte)Math.round(normalizedSpeed * 255f),
+                (byte)(inverse ? 0x01 : 0x00),
+        });
+    }
+
+    /**
      * Sends the command and receives telemetry in response.
      */
     private synchronized Telemetry sendCommand(final byte[]... buffers) {
         if (socket == null) {
             return null;
         }
+
         final long startTimeMillis = System.currentTimeMillis();
         try {
             for (final byte[] buffer : buffers) {

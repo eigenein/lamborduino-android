@@ -115,7 +115,18 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
 
     @Override
     public void onUp() {
-        // TODO: stop vehicle. Empty move executor.
+        moveExecutor.execute(new Runnable() {
+            @Override
+            public void run() {
+                final Telemetry telemetry = vehicleConnection.stop();
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        updateTelemetryView(telemetry);
+                    }
+                });
+            }
+        });
     }
 
     @Override
@@ -127,8 +138,7 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
         moveExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                // TODO: move vehicle instead of doing nothing.
-                final Telemetry telemetry = vehicleConnection.noop();
+                final Telemetry telemetry = vehicleConnection.move(Math.abs(dy), dy < 0f);
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
