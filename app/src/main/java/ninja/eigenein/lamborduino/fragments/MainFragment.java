@@ -38,6 +38,9 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
 
     private static final UUID SERIAL_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
+    private static final float COS_PI_4 = (float)Math.cos(Math.PI / 4.0);
+    private static final float SIN_PI_4 = (float)Math.sin(Math.PI / 4.0);
+
     private final ThreadPoolExecutor moveExecutor = (ThreadPoolExecutor)Executors.newFixedThreadPool(1);
     private final VehicleConnection vehicleConnection = new VehicleConnection();
 
@@ -135,10 +138,16 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
             // Other command is already being executed.
             return;
         }
+        // Now magic. Rotate vector (dx, dy) by (- PI / 4).
+        final float leftSpeed = dx * COS_PI_4 + dy * SIN_PI_4;
+        final float rightSpeed = dy * COS_PI_4 - dx * SIN_PI_4;
         moveExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                final Telemetry telemetry = vehicleConnection.move(Math.abs(dy), dy < 0f);
+                final Telemetry telemetry = vehicleConnection.move(
+                        Math.abs(leftSpeed), leftSpeed < 0f,
+                        Math.abs(rightSpeed), rightSpeed < 0f
+                );
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
