@@ -86,6 +86,7 @@ public class VehicleConnection {
      * Sends the command and receives telemetry in response.
      */
     private synchronized Telemetry sendCommand(final byte[]... buffers) {
+        Log.d(LOG_TAG, "Send command");
         if (socket == null) {
             return null;
         }
@@ -97,7 +98,7 @@ public class VehicleConnection {
             }
             return receiveTelemetry(startTimeMillis);
         } catch (final IOException e) {
-            Log.e(LOG_TAG, "Failed to send command.", e);
+            Log.e(LOG_TAG, "Failed to send command", e);
             setSocket(null);
             return null;
         }
@@ -107,6 +108,7 @@ public class VehicleConnection {
      * Receives telemetry from the connected device.
      */
     private synchronized Telemetry receiveTelemetry(final long startTimeMillis) throws IOException {
+        Log.d(LOG_TAG, "Receive telemetry");
         final ByteOrder byteOrder = receiveByteOrderMark();
         final double vcc = receiveInt(byteOrder) / 1000.0;
         return new Telemetry(System.currentTimeMillis() - startTimeMillis, vcc);
@@ -116,8 +118,11 @@ public class VehicleConnection {
      * Receives byte order mark and gets {@see ByteOrder}.
      */
     private synchronized ByteOrder receiveByteOrderMark() throws IOException {
+        Log.d(LOG_TAG, "Receive byte order mark");
         final int byte1 = socket.getInputStream().read();
+        Log.d(LOG_TAG, "First byte: " + byte1);
         final int byte2 = socket.getInputStream().read();
+        Log.d(LOG_TAG, "Second byte: " + byte2);
         if ((byte1 == BYTE_ORDER_MARK[1]) && (byte2 == BYTE_ORDER_MARK[0])) {
             return ByteOrder.BIG_ENDIAN;
         }
@@ -131,6 +136,7 @@ public class VehicleConnection {
      * Receives {@see int} that is Arduino's long.
      */
     private synchronized int receiveInt(final ByteOrder byteOrder) throws IOException {
+        Log.d(LOG_TAG, "Receive integer");
         final byte[] buffer = new byte[Integer.SIZE / 8];
         receiveBytes(buffer);
         return ByteBuffer.wrap(buffer).order(byteOrder).getInt();
@@ -140,6 +146,7 @@ public class VehicleConnection {
      * Performs blocking read.
      */
     private synchronized void receiveBytes(final byte[] buffer) throws IOException {
+        Log.d(LOG_TAG, "Receive " + buffer.length + " bytes");
         final InputStream inputStream = socket.getInputStream();
         for (int offset = 0; offset < buffer.length; offset += 1) {
             if (inputStream.read(buffer, offset, 1) == 0) {

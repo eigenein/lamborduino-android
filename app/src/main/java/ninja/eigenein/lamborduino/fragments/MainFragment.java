@@ -36,6 +36,8 @@ import ninja.eigenein.lamborduino.core.Telemetry;
 
 public class MainFragment extends Fragment implements JoypadView.Listener {
 
+    private static final String LOG_TAG = MainFragment.class.getSimpleName();
+
     private static final UUID SERIAL_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private static final float COS_PI_4 = (float)Math.cos(Math.PI / 4.0);
@@ -141,6 +143,7 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
         // Now magic. Rotate vector (dx, dy) by (- PI / 4).
         final float leftSpeed = dx * COS_PI_4 + dy * SIN_PI_4;
         final float rightSpeed = dy * COS_PI_4 - dx * SIN_PI_4;
+        Log.d(LOG_TAG, "Left speed: " + leftSpeed + ". Right speed: " + rightSpeed);
         moveExecutor.execute(new Runnable() {
             @Override
             public void run() {
@@ -226,10 +229,13 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
             vehicleConnection.setSocket(null);
             publishProgress(devices[0].getName());
             for (int i = 0; i < ATTEMPT_COUNT; i += 1) {
-                Log.i(LOG_TAG, "attempt #" + i);
+                Log.i(LOG_TAG, "Attempt #" + i);
                 try {
+                    Log.d(LOG_TAG, "Create socket");
                     final BluetoothSocket socket = devices[0].createRfcommSocketToServiceRecord(SERIAL_UUID);
+                    Log.d(LOG_TAG, "Connect");
                     socket.connect();
+                    Log.d(LOG_TAG, "Connected");
                     vehicleConnection.setSocket(socket);
                 } catch (final IOException e) {
                     exception = e;
@@ -238,6 +244,7 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
                 exception = null;
                 break;
             }
+            Log.d(LOG_TAG, "Finished");
             return null;
         }
 
@@ -248,6 +255,7 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
 
         @Override
         protected void onPostExecute(final @NonNull Void result) {
+            Log.d(LOG_TAG, "Post execute");
             progressDialog.dismiss();
             progressDialog = null;
 
