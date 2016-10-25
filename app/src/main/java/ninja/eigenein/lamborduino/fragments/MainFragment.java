@@ -36,8 +36,6 @@ import ninja.eigenein.lamborduino.core.Telemetry;
 
 public class MainFragment extends Fragment implements JoypadView.Listener {
 
-    private static final String LOG_TAG = MainFragment.class.getSimpleName();
-
     private static final UUID SERIAL_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private static final float COS_PI_4 = (float)Math.cos(Math.PI / 4.0);
@@ -140,16 +138,23 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
             // Other command is already being executed.
             return;
         }
-        // Now magic. Rotate vector (dx, dy) by (- PI / 4).
-        final float leftSpeed = dx * COS_PI_4 + dy * SIN_PI_4;
-        final float rightSpeed = dy * COS_PI_4 - dx * SIN_PI_4;
-        Log.d(LOG_TAG, "Left speed: " + leftSpeed + ". Right speed: " + rightSpeed);
         moveExecutor.execute(new Runnable() {
             @Override
             public void run() {
+                // Now magic. Rotate vector (dx, dy) by (- PI / 4).
+                final float leftSpeed = dx * COS_PI_4 + dy * SIN_PI_4;
+                final float rightSpeed = dy * COS_PI_4 - dx * SIN_PI_4;
+                // Extract absolute speeds.
+                final boolean leftSpeedInverse = leftSpeed < 0f;
+                final boolean rightSpeedInverse = rightSpeed < 0f;
+                final float absoluteLeftSpeed = Math.abs(leftSpeed);
+                final float absoluteRightSpeed = Math.abs(rightSpeed);
+                // Normalize the fastest engine speed.
+                final float alpha = distance > 0.01 ? distance / Math.max(absoluteLeftSpeed, absoluteRightSpeed) : 1.0f;
+
                 final Telemetry telemetry = vehicleConnection.move(
-                        Math.abs(leftSpeed), leftSpeed < 0f,
-                        Math.abs(rightSpeed), rightSpeed < 0f
+                        absoluteLeftSpeed * alpha, leftSpeedInverse,
+                        absoluteRightSpeed * alpha, rightSpeedInverse
                 );
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
