@@ -71,13 +71,10 @@ public class VehicleConnection {
             final float rightWheelSpeed,
             final boolean rightWheelInverse
     ) {
-        final float normalizedLeftWheelSpeed = Math.max(0f, Math.min(1f, leftWheelSpeed));
-        final float normalizedRightWheelSpeed = Math.max(0f, Math.min(1f, rightWheelSpeed));
-
         return sendCommand(COMMAND_MOVE, new byte[] {
-                (byte)Math.round(normalizedLeftWheelSpeed * 255f),
+                (byte)Math.floor(Math.max(0f, Math.min(1f, leftWheelSpeed)) * 255f),
                 (byte)(leftWheelInverse ? 0x01 : 0x00),
-                (byte)Math.round(normalizedRightWheelSpeed * 255f),
+                (byte)Math.floor(Math.max(0f, Math.min(1f, rightWheelSpeed)) * 255f),
                 (byte)(rightWheelInverse ? 0x01 : 0x00),
         });
     }
