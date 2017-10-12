@@ -30,6 +30,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 
 import ninja.eigenein.joypad.JoypadView;
+import ninja.eigenein.joypad.WheelsPower;
 import ninja.eigenein.lamborduino.R;
 import ninja.eigenein.lamborduino.core.VehicleConnection;
 import ninja.eigenein.lamborduino.core.Telemetry;
@@ -141,20 +142,11 @@ public class MainFragment extends Fragment implements JoypadView.Listener {
         moveExecutor.execute(new Runnable() {
             @Override
             public void run() {
-                // Now magic. Rotate vector (dx, dy) by (- PI / 4).
-                final float leftSpeed = dx * COS_PI_4 + dy * SIN_PI_4;
-                final float rightSpeed = dy * COS_PI_4 - dx * SIN_PI_4;
-                // Extract absolute speeds.
-                final boolean leftSpeedInverse = leftSpeed < 0f;
-                final boolean rightSpeedInverse = rightSpeed < 0f;
-                final float absoluteLeftSpeed = Math.abs(leftSpeed);
-                final float absoluteRightSpeed = Math.abs(rightSpeed);
-                // Normalize the fastest engine speed.
-                final float alpha = distance > 0.01 ? distance / Math.max(absoluteLeftSpeed, absoluteRightSpeed) : 1.0f;
+                final WheelsPower wheelsPower = WheelsPower.wheelsPower(distance, dx, dy);
 
                 final Telemetry telemetry = vehicleConnection.move(
-                        absoluteLeftSpeed * alpha, leftSpeedInverse,
-                        absoluteRightSpeed * alpha, rightSpeedInverse
+                        Math.abs(wheelsPower.getLeft()), wheelsPower.getLeft() < 0f,
+                        Math.abs(wheelsPower.getRight()), wheelsPower.getRight() < 0f
                 );
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
