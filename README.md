@@ -1,1 +1,1 @@
-Please find the firmware here: https://github.com/eigenein/lamborduino-firmware.
+Deprecated: see https://github.com/eigenein/rc-car.
